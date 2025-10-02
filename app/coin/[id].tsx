@@ -1,12 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Image, ScrollView, StyleSheet, View } from "react-native";
 
 import {
   Card,
@@ -16,41 +10,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Text } from "@/components/ui/text";
-import { formatCurrency, formatLargeNumber } from "@/lib/utils";
-
-interface Coin {
-  id: string;
-  name: string;
-  symbol: string;
-  rank: number;
-  circulating_supply: number;
-  total_supply: number;
-  max_supply: number;
-  beta_value: number;
-  first_data_at: string;
-  last_updated: string;
-  quotes: {
-    USD: {
-      price: number;
-      volume_24h: number;
-      volume_24h_change_24h: number;
-      market_cap: number;
-      market_cap_change_24h: number;
-      percent_change_15m: number;
-      percent_change_30m: number;
-      percent_change_1h: number;
-      percent_change_6h: number;
-      percent_change_12h: number;
-      percent_change_24h: number;
-      percent_change_7d: number;
-      percent_change_30d: number;
-      percent_change_1y: number;
-      ath_price: number;
-      ath_date: string;
-      percent_from_price_ath: number;
-    };
-  };
-}
+import {
+  formatCurrency,
+  formatDate,
+  formatLargeNumber,
+  formatNumber,
+  formatPercentage,
+} from "@/lib/utils";
+import Loading from "@/components/Loading";
+import { ErrorDisplay } from "@/components/ErrorDisplay";
+import { Coin } from "@/types/crypto";
+import { getCoinImageUrl } from "@/actions/get-coin-image-url";
 
 type CoinDetailParams = {
   id: string;
@@ -60,16 +30,13 @@ export default function CoinDetailScreen() {
   const { id } = useLocalSearchParams<CoinDetailParams>();
   const [coin, setCoin] = useState<Coin | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const getCoinImageUrl = (coinId: string, size: string = "64x64") => {
-    return `https://static.coinpaprika.com/coin/${coinId}/logo.png?size=${size}`;
-  };
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchCoin = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await fetch(
           `https://api.coinpaprika.com/v1/tickers/${id}`
         );
@@ -91,22 +58,45 @@ export default function CoinDetailScreen() {
     }
   }, [id]);
 
+  // const handleRetry = () => {
+  //   setError(null);
+  //   if (id) {
+  //     useEffect(() => {
+  //       const fetchCoin = async () => {
+  //         try {
+  //           setLoading(true);
+  //           const response = await fetch(
+  //             `https://api.coinpaprika.com/v1/tickers/${id}`
+  //           );
+  //           if (!response.ok)
+  //             throw new Error(`Failed to fetch: ${response.status}`);
+  //           const coinData = await response.json();
+  //           setCoin(coinData);
+  //         } catch (e: any) {
+  //           setError(e.message);
+  //         } finally {
+  //           setLoading(false);
+  //         }
+  //       };
+  //       fetchCoin();
+  //     }, []);
+  //   }
+  // };
+
   if (loading) {
-    return (
-      <View className="flex-1 p-4 justify-center items-center">
-        <ActivityIndicator size="large" />
-        <Text className="mt-4">Loading coin data...</Text>
-      </View>
-    );
+    return <Loading />;
   }
 
-  if (error) {
-    return (
-      <View className="flex-1 p-4 justify-center items-center">
-        <Text className="text-red-500 text-center">Error: {error}</Text>
-      </View>
-    );
-  }
+  // if (error) {
+  //   return (
+  //     <ErrorDisplay
+  //       title="Failed to Load Coin"
+  //       message={error}
+  //       onRetry={handleRetry}
+  //       retryButtonText="Reload Coin"
+  //     />
+  //   );
+  // }
 
   if (!coin) {
     return (
@@ -116,10 +106,16 @@ export default function CoinDetailScreen() {
     );
   }
 
-  const isPositiveChange = coin.quotes.USD.percent_change_24h > 0;
+  const priceChange24h = formatPercentage(coin.quotes.USD.percent_change_24h);
+  const priceChange7d = formatPercentage(coin.quotes.USD.percent_change_7d);
+  const priceChange30d = formatPercentage(coin.quotes.USD.percent_change_30d);
+  const athChange = formatPercentage(coin.quotes.USD.percent_from_price_ath);
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <ScrollView
+      className="flex-1 bg-gray-50"
+      showsVerticalScrollIndicator={false}
+    >
       <View className="p-4">
         {/* Header Card with Coin Image */}
         <Card className="mb-4">
@@ -141,22 +137,28 @@ export default function CoinDetailScreen() {
           <CardHeader>
             <CardTitle>Price</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Text className="text-3xl font-bold mb-2">
+          <CardContent className="space-y-3">
+            <Text className="text-3xl font-bold">
               {formatCurrency(coin.quotes.USD.price)}
             </Text>
-            <View
-              className={`flex-row items-center ${
-                isPositiveChange ? "text-green-500" : "text-red-500"
-              }`}
-            >
-              <Text
-                className={isPositiveChange ? "text-green-500" : "text-red-500"}
-              >
-                {isPositiveChange ? "↗" : "↘"}{" "}
-                {coin.quotes.USD.percent_change_24h.toFixed(2)}%
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">24h Change</Text>
+              <Text className={priceChange24h.color}>
+                {priceChange24h.value}
               </Text>
-              <Text className="text-gray-500 ml-2">(24h)</Text>
+            </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">7d Change</Text>
+              <Text className={priceChange7d.color}>{priceChange7d.value}</Text>
+            </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">30d Change</Text>
+              <Text className={priceChange30d.color}>
+                {priceChange30d.value}
+              </Text>
             </View>
           </CardContent>
         </Card>
@@ -185,22 +187,178 @@ export default function CoinDetailScreen() {
                 {formatLargeNumber(coin.quotes.USD.volume_24h)}
               </Text>
             </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">Market Cap Change (24h)</Text>
+              <Text
+                className={
+                  coin.quotes.USD.market_cap_change_24h > 0
+                    ? "text-green-500"
+                    : "text-red-500"
+                }
+              >
+                {formatPercentage(coin.quotes.USD.market_cap_change_24h).value}
+              </Text>
+            </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">Volume Change (24h)</Text>
+              <Text
+                className={
+                  coin.quotes.USD.volume_24h_change_24h > 0
+                    ? "text-green-500"
+                    : "text-red-500"
+                }
+              >
+                {formatPercentage(coin.quotes.USD.volume_24h_change_24h).value}
+              </Text>
+            </View>
           </CardContent>
         </Card>
 
-        {/* Additional Info Card */}
+        {/* Supply Information */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Supply Information</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">Circulating Supply</Text>
+              <Text className="font-semibold">
+                {formatNumber(coin.circulating_supply)} {coin.symbol}
+              </Text>
+            </View>
+
+            {coin.total_supply > 0 && (
+              <View className="flex-row justify-between">
+                <Text className="text-gray-600">Total Supply</Text>
+                <Text className="font-semibold">
+                  {formatNumber(coin.total_supply)} {coin.symbol}
+                </Text>
+              </View>
+            )}
+
+            {coin.max_supply > 0 && (
+              <View className="flex-row justify-between">
+                <Text className="text-gray-600">Max Supply</Text>
+                <Text className="font-semibold">
+                  {formatNumber(coin.max_supply)} {coin.symbol}
+                </Text>
+              </View>
+            )}
+
+            {coin.max_supply > 0 && (
+              <View className="flex-row justify-between">
+                <Text className="text-gray-600">Circulation %</Text>
+                <Text className="font-semibold">
+                  {((coin.circulating_supply / coin.max_supply) * 100).toFixed(
+                    1
+                  )}
+                  %
+                </Text>
+              </View>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* All-Time High Information */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>All-Time High</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">ATH Price</Text>
+              <Text className="font-semibold">
+                {formatCurrency(coin.quotes.USD.ath_price)}
+              </Text>
+            </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">ATH Date</Text>
+              <Text className="font-semibold">
+                {formatDate(coin.quotes.USD.ath_date)}
+              </Text>
+            </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">From ATH</Text>
+              <Text className={athChange.color}>{athChange.value}</Text>
+            </View>
+          </CardContent>
+        </Card>
+
+        {/* Additional Performance Metrics */}
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle>Performance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">1h Change</Text>
+              <Text
+                className={
+                  formatPercentage(coin.quotes.USD.percent_change_1h).color
+                }
+              >
+                {formatPercentage(coin.quotes.USD.percent_change_1h).value}
+              </Text>
+            </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">6h Change</Text>
+              <Text
+                className={
+                  formatPercentage(coin.quotes.USD.percent_change_6h).color
+                }
+              >
+                {formatPercentage(coin.quotes.USD.percent_change_6h).value}
+              </Text>
+            </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">12h Change</Text>
+              <Text
+                className={
+                  formatPercentage(coin.quotes.USD.percent_change_12h).color
+                }
+              >
+                {formatPercentage(coin.quotes.USD.percent_change_12h).value}
+              </Text>
+            </View>
+
+            <View className="flex-row justify-between">
+              <Text className="text-gray-600">1y Change</Text>
+              <Text
+                className={
+                  formatPercentage(coin.quotes.USD.percent_change_1y).color
+                }
+              >
+                {formatPercentage(coin.quotes.USD.percent_change_1y).value}
+              </Text>
+            </View>
+          </CardContent>
+        </Card>
+
+        {/* Additional Coin Info */}
         <Card>
           <CardHeader>
             <CardTitle>About {coin.name}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Text className="text-gray-600">
+            <Text className="text-gray-600 mb-3">
               {coin.name} ({coin.symbol}) is currently ranked #{coin.rank} by
-              market capitalization. The current price is{" "}
-              {formatCurrency(coin.quotes.USD.price)} with a
-              {isPositiveChange ? " gain" : " loss"} of{" "}
+              market capitalization with a circulating supply of{" "}
+              {formatNumber(coin.circulating_supply)} {coin.symbol}.
+            </Text>
+            <Text className="text-gray-600 mb-3">
+              The current price is {formatCurrency(coin.quotes.USD.price)} with
+              a{priceChange24h.isPositive ? " gain" : " loss"} of{" "}
               {coin.quotes.USD.percent_change_24h.toFixed(2)}% in the last 24
               hours.
+            </Text>
+            <Text className="text-gray-600 text-xs">
+              Last updated: {formatDate(coin.last_updated)}
             </Text>
           </CardContent>
         </Card>

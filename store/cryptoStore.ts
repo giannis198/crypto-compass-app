@@ -1,20 +1,6 @@
-import { create } from "zustand";
+import { Coin } from "@/types/crypto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-interface Coin {
-  id: string;
-  name: string;
-  market_cap: number;
-  price: number;
-  percent_change_24h: number;
-  quotes: {
-    USD: {
-      price: number;
-      market_cap: number;
-      percent_change_24h: number;
-    };
-  };
-}
+import { create } from "zustand";
 
 interface CryptoState {
   coins: Coin[];
@@ -47,6 +33,7 @@ export const useCryptoStore = create<CryptoState>((set, get) => ({
       if (newCoins.length === 0) {
         set({ hasMore: false });
       }
+
       const coinsToStore = [...get().coins, ...newCoins];
       await AsyncStorage.setItem("coins", JSON.stringify(coinsToStore));
       set({
