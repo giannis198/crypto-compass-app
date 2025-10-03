@@ -2,6 +2,8 @@
 import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { formatCurrency } from "@/lib/utils";
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 interface PriceInfoProps {
   price: number;
@@ -9,16 +11,29 @@ interface PriceInfoProps {
 }
 
 export function PriceInfo({ price, percentChange24h }: PriceInfoProps) {
+  const { isDark } = useAppTheme();
   const isPositive = percentChange24h > 0;
 
   return (
     <View className="items-end">
-      <Text className="font-semibold text-gray-900 mb-1">
+      <Text
+        className={
+          isDark
+            ? "font-semibold text-indigo-100 mb-1"
+            : "font-semibold text-indigo-900 mb-1"
+        }
+      >
         {formatCurrency(price)}
       </Text>
       <Text
         className={`text-xs font-medium ${
-          isPositive ? "text-green-500" : "text-red-500"
+          isPositive
+            ? isDark
+              ? "text-green-400"
+              : "text-green-600"
+            : isDark
+            ? "text-red-400"
+            : "text-red-600"
         }`}
       >
         {isPositive ? "+" : ""}

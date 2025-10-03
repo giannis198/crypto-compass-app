@@ -1,5 +1,5 @@
 import { View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context"; // Import from here
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Text } from "./ui/text";
 
 const Footer = () => (

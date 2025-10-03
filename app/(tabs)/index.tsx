@@ -3,13 +3,14 @@ import { useEffect } from "react";
 import { ActivityIndicator, FlatList, View } from "react-native";
 
 import { Text } from "@/components/ui/text";
-
 import Header from "@/components/Header";
-
 import { CoinListItem } from "@/components/CoinListItem";
 import Loading from "@/components/Loading";
+import { useAppTheme } from "@/hooks/use-app-theme";
 
 export default function HomeScreen() {
+  const { isDark } = useAppTheme();
+
   const {
     coins,
     loading,
@@ -30,26 +31,58 @@ export default function HomeScreen() {
     if (!loading && !refreshing) return null;
     return (
       <View className="py-4">
-        <ActivityIndicator size="small" />
+        <ActivityIndicator
+          size="small"
+          color={isDark ? "#818CF8" : "#4F46E5"} // indigo-400 / indigo-600
+        />
       </View>
     );
   };
 
-  if (error) {
+  // For initial load (full screen)
+  if (loading && coins.length === 0) {
     return (
-      <View className="flex-1 justify-center items-center p-4">
-        <Text className="text-red-500 text-center mb-4">Error: {error}</Text>
-        <Text className="text-blue-500 text-center" onPress={refreshCoins}>
-          Tap to retry
-        </Text>
+      <View className={isDark ? "flex-1 bg-gray-900" : "flex-1 bg-gray-50"}>
+        <Header />
+        <Loading fullScreen={true} />
+      </View>
+    );
+  }
+
+  if (error && coins.length === 0) {
+    return (
+      <View className={isDark ? "flex-1 bg-gray-900" : "flex-1 bg-gray-50"}>
+        <Header />
+        <View className="flex-1 justify-center items-center p-4">
+          <Text
+            className={
+              isDark
+                ? "text-red-400 text-center mb-4"
+                : "text-red-500 text-center mb-4"
+            }
+          >
+            Error: {error}
+          </Text>
+          <Text
+            className={
+              isDark
+                ? "text-indigo-400 text-center"
+                : "text-indigo-600 text-center"
+            }
+            onPress={refreshCoins}
+          >
+            Tap to retry
+          </Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View className={isDark ? "flex-1 bg-gray-900" : "flex-1 bg-gray-50"}>
       {/* Header */}
       <Header />
+
       {/* Coin List */}
       <FlatList
         data={coins}
@@ -58,10 +91,14 @@ export default function HomeScreen() {
         onEndReached={fetchMoreCoins}
         onEndReachedThreshold={0.5}
         ListFooterComponent={renderFooter}
-        ListEmptyComponent={<Loading />}
+        ListEmptyComponent={() => <Loading fullScreen={false} />}
         onRefresh={refreshCoins}
         refreshing={refreshing}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          flexGrow: 1,
+          backgroundColor: isDark ? "#111827" : "#F9FAFB",
+        }}
       />
     </View>
   );

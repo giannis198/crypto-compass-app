@@ -44,7 +44,6 @@ export function formatMarketCapPrecise(value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
-// lib/utils.ts - Add this function
 export function formatNumber(value: number): string {
   if (!value || value === 0) return "0";
 
@@ -64,12 +63,27 @@ export function formatNumber(value: number): string {
   return value.toLocaleString("en-US");
 }
 
-export const formatPercentage = (value: number) => {
+export const formatPercentage = (value: number, isDark?: boolean) => {
   const isPositive = value > 0;
+
+  // Default colors (when isDark is not provided) - for backward compatibility
+  let color = isPositive ? "text-green-500" : "text-red-500";
+
+  // Theme-aware colors (when isDark is provided)
+  if (isDark !== undefined) {
+    color = isPositive
+      ? isDark
+        ? "text-green-400"
+        : "text-green-600"
+      : isDark
+      ? "text-red-400"
+      : "text-red-600";
+  }
+
   return {
     value: `${isPositive ? "+" : ""}${value?.toFixed(2)}%`,
     isPositive,
-    color: isPositive ? "text-green-500" : "text-red-500",
+    color,
   };
 };
 
